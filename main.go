@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -47,13 +48,11 @@ func analysisFile(filePath string) {
 	// 行数计数
 	index := 0
 	// 创建待赋值的结构体
-	var cb configBean
+	cb := ConfigBean{}
 
 	t := reflect.TypeOf(cb)
 
-	c := reflect.ValueOf(cb)
-
-	value := reflect.Indirect(c)
+	c := reflect.ValueOf(&cb).Elem()
 
 	kv := make([][]string, 0, 10)
 
@@ -78,22 +77,30 @@ func analysisFile(filePath string) {
 		case reflect.String:
 			for k, v := range kv {
 				if strings.EqualFold(f.Name, v[0]) {
-					fmt.Printf("%v===============\n", k)
+					c.FieldByName(v[0]).SetString(v[1])
+					fmt.Printf("%v===============%v\n", k, v[1])
 				}
 			}
 			fmt.Printf("字符串\n")
 		case reflect.Int64:
+			for k, v := range kv {
+				if strings.EqualFold(f.Name, v[0]) {
+					i, _ := strconv.ParseInt(v[1], 10, 64)
+					c.FieldByName(v[0]).SetInt(i)
+					fmt.Printf("%v===============\n", k)
+				}
+			}
+
 			fmt.Printf("整形数字\n")
 		case reflect.Bool:
 			fmt.Printf("布尔类型\n")
 		}
-		cc := value.FieldByName("Name")
-		fmt.Printf("------------>%v\n", cc)
+
 		// val := v.Field(i).Interface()                     //取得字段的值
 		fmt.Printf("%6s: %v\n", f.Name, f.Type) //第i个字段的名称,类型,值
 	}
 
-	fmt.Printf("=====>%v\n", cb.Name)
+	fmt.Printf("++++++++> %v  %v\n", cb.Name, cb.Size)
 	fmt.Printf("获取的行数是: %d\n", index)
 }
 
@@ -118,7 +125,7 @@ func strFrag(str string, mark string) []string {
 /*
  * 将获取的结果赋值给结构体对象
  */
-type configBean struct {
+type ConfigBean struct {
 	Name string
 	Size int64
 }
