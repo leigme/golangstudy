@@ -11,35 +11,24 @@ import (
 )
 
 func main() {
-	fmt.Println("Hello World! Golang")
-	// sampleReadFromString()
-	analysisFile("default.conf")
-}
-
-/*
- * ReadFrom 输出
- */
-func ReadFrom(reader io.Reader, num int) ([]byte, error) {
-	p := make([]byte, num)
-	n, err := reader.Read(p)
-	if n > 0 {
-		return p[:n], nil
+	fmt.Println("Hello World! Golang...")
+	cb, err := analysisFile("default.conf")
+	if nil != err {
+		fmt.Printf("出错了...=>%v", err)
+		return
 	}
-	return p, err
+	fmt.Printf("解析配置文件:第一个值[%v],第二个值[%v].\n", cb.Name, cb.Size)
 }
 
-func sampleReadFromString() {
-	data, _ := ReadFrom(strings.NewReader("from string"), 12)
-	fmt.Println(data)
-}
-
-func analysisFile(filePath string) {
+func analysisFile(filePath string) (ConfigBean, error) {
+	// 创建待赋值的结构体
+	cb := ConfigBean{}
 	// 打开文件对象
 	file, err := os.Open(filePath)
 	// 如果出错返回
 	if nil != err {
 		fmt.Println("读取文件出错...")
-		return
+		return cb, err
 	}
 	// 运行结束关闭文件对象
 	defer file.Close()
@@ -47,8 +36,6 @@ func analysisFile(filePath string) {
 	fileReader := bufio.NewReader(file)
 	// 行数计数
 	index := 0
-	// 创建待赋值的结构体
-	cb := ConfigBean{}
 
 	t := reflect.TypeOf(cb)
 
@@ -68,40 +55,29 @@ func analysisFile(filePath string) {
 			break
 		}
 	}
-
-	fmt.Printf("读取的文件长度是:%v\n", len(kv))
-
-	for i := 0; i < t.NumField(); i++ { //NumField取出这个接口所有的字段数量
-		f := t.Field(i) //取得结构体的第i个字段
+	//NumField取出这个接口所有的字段数量
+	for i := 0; i < t.NumField(); i++ {
+		//取得结构体的第i个字段
+		f := t.Field(i)
 		switch f.Type.Kind() {
 		case reflect.String:
-			for k, v := range kv {
+			for _, v := range kv {
 				if strings.EqualFold(f.Name, v[0]) {
 					c.FieldByName(v[0]).SetString(v[1])
-					fmt.Printf("%v===============%v\n", k, v[1])
 				}
 			}
-			fmt.Printf("字符串\n")
 		case reflect.Int64:
-			for k, v := range kv {
+			for _, v := range kv {
 				if strings.EqualFold(f.Name, v[0]) {
 					i, _ := strconv.ParseInt(v[1], 10, 64)
 					c.FieldByName(v[0]).SetInt(i)
-					fmt.Printf("%v===============\n", k)
 				}
 			}
-
-			fmt.Printf("整形数字\n")
 		case reflect.Bool:
 			fmt.Printf("布尔类型\n")
 		}
-
-		// val := v.Field(i).Interface()                     //取得字段的值
-		fmt.Printf("%6s: %v\n", f.Name, f.Type) //第i个字段的名称,类型,值
 	}
-
-	fmt.Printf("++++++++> %v  %v\n", cb.Name, cb.Size)
-	fmt.Printf("获取的行数是: %d\n", index)
+	return cb, nil
 }
 
 /*
@@ -109,6 +85,7 @@ func analysisFile(filePath string) {
  */
 func strFrag(str string, mark string) []string {
 	strs := strings.Split(str, mark)
+	strs[1] = strings.Trim(strs[1], "\n")
 	if 2 < len(strs) {
 		ss := ""
 		rstrs := make([]string, 2, 2)
@@ -116,7 +93,7 @@ func strFrag(str string, mark string) []string {
 			ss += strs[i]
 		}
 		rstrs[0] = strs[0]
-		rstrs[1] = ss
+		rstrs[1] = strings.Trim(ss, "\n")
 		return rstrs
 	}
 	return strs
