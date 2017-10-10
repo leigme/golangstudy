@@ -47,19 +47,15 @@ func analysisFile(filePath string) {
 	// 行数计数
 	index := 0
 	// 创建待赋值的结构体
-	cb := new(configBean)
+	var cb configBean
 
 	t := reflect.TypeOf(cb)
-	fmt.Printf("Type:%s\n", t.Name())
-	fmt.Println("Type:", t.Name())
-	v := reflect.ValueOf(cb)
-	fmt.Printf("结构体类型是:%s\n", v)
-	fmt.Println("结构体类型是: ", v)
-	for i := 0; i < t.NumField(); i++ { //NumField取出这个接口所有的字段数量
-		f := t.Field(i)                                   //取得结构体的第i个字段
-		val := v.Field(i).Interface()                     //取得字段的值
-		fmt.Printf("%6s: %v = %v\n", f.Name, f.Type, val) //第i个字段的名称,类型,值
-	}
+
+	c := reflect.ValueOf(cb)
+
+	value := reflect.Indirect(c)
+
+	kv := make([][]string, 0, 10)
 
 	// 开始读取
 	for {
@@ -67,13 +63,37 @@ func analysisFile(filePath string) {
 		str, err := fileReader.ReadString('\n')
 		index++
 		strs := strFrag(str, "=")
-		fmt.Printf("分割 key: %s; value: %s\n", strs[0], strs[1])
+		kv = append(kv, strs)
 		// 读取结束循环
 		if io.EOF == err {
 			break
 		}
 	}
 
+	fmt.Printf("读取的文件长度是:%v\n", len(kv))
+
+	for i := 0; i < t.NumField(); i++ { //NumField取出这个接口所有的字段数量
+		f := t.Field(i) //取得结构体的第i个字段
+		switch f.Type.Kind() {
+		case reflect.String:
+			for k, v := range kv {
+				if strings.EqualFold(f.Name, v[0]) {
+					fmt.Printf("%v===============\n", k)
+				}
+			}
+			fmt.Printf("字符串\n")
+		case reflect.Int64:
+			fmt.Printf("整形数字\n")
+		case reflect.Bool:
+			fmt.Printf("布尔类型\n")
+		}
+		cc := value.FieldByName("Name")
+		fmt.Printf("------------>%v\n", cc)
+		// val := v.Field(i).Interface()                     //取得字段的值
+		fmt.Printf("%6s: %v\n", f.Name, f.Type) //第i个字段的名称,类型,值
+	}
+
+	fmt.Printf("=====>%v\n", cb.Name)
 	fmt.Printf("获取的行数是: %d\n", index)
 }
 
@@ -99,6 +119,6 @@ func strFrag(str string, mark string) []string {
  * 将获取的结果赋值给结构体对象
  */
 type configBean struct {
-	name string
-	size int64
+	Name string
+	Size int64
 }
